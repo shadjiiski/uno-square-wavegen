@@ -1,11 +1,11 @@
 /**
  * Overview
  * ========
- * uno-square-wavegen sets PWM on Timer1 of the Atmega328 microcontroller (the heart of
- * the Arduino Uno) to transform a regular Arduino Uno into a square wave generator with
- * controllable frequency and duty cycle. Output is fixed: pin9 (output A) and pin 10
- * (output B). Both outputs share the same frequency, however, they can have different
- * duty cycles.
+ * uno-square-wavegen sets PWM on Timer1 of the Atmega328 microcontroller
+ * (the heart of the Arduino Uno) to transform a regular Arduino Uno into
+ * a square wave generator with controllable frequency and duty cycle.
+ * Output is fixed: pin9 (output A) and pin 10 (output B). Both outputs
+ * share the same frequency, however, they can have different duty cycles.
  * 
  * Boundaries
  * ==========
@@ -20,55 +20,64 @@
  * 
  * How to set frequency and duty cycle
  * ===================================
- * The wave generator can be tuned via serial communication. Just send messages like this:
+ * The wave generator can be tuned via serial communication. Just send messages
+ * like this:
  * frequency:dutyA[:dutyB]
- * frequency, dutyA and dutyB are integers, that are a thousand times larger than the values
- * that you wish to set. For example, if you want to set 10.23 Hz and 0.59 duty cycle, pass
+ * frequency, dutyA and dutyB are integers, that are a thousand times larger
+ * than the values that you wish to set. For example, if you want to set 10.23
+ * Hz and 0.59 duty cycle, pass
  * 10230:590
  * This is done to fix the precision and to avoid float point numbers.
- * Note: dutyB is optional. If it is not set, both ouptuts will have the same duty cycle
+ * Note: dutyB is optional. If it is not set, both ouptuts will have the same
+ * duty cycle
  * 
  * Communication protocol
  * ======================
  * 
  * Echo
  * ----
- * Every command (known or unknown) will be echoed back with a 'Echo:' prefix (without the quotes)
+ * Every command (known or unknown) will be echoed back with a 'Echo:' prefix
+ * (without the quotes)
  * 
  * Tuning
  * ------
  * 1. You send the tuning command frequency:dutyA[:dutyB]
  * 2. You receive Echo:frequency:dutyA[:dutyB]
  * 3. The wave generator tunes itself (if possible)
- * 4. You receive the current state Frequency:< frequency >:DutyA:< dutyA >:DutyB:< dutyB >
- *   (with < varX > expanded to integer values) 
- * 5. You use the current state to determine whether you were able to tune the wave generator
+ * 4. You receive the current state
+ *    Frequency:< frequency >:DutyA:< dutyA >:DutyB:< dutyB >
+ *    (with < varX > expanded to integer values) 
+ * 5. You use the current state to determine whether you were able to tune the
+ *    wave generator
  * 
  * Getting current state
  * ---------------------
  * 1. You send the command STATE
  * 2. You receive Echo:STATE
- * 3. You receive the current state Frequency:< frequency >:DutyA:< dutyA >:DutyB:< dutyB >
+ * 3. You receive the current state
+ *    Frequency:< frequency >:DutyA:< dutyA >:DutyB:< dutyB >
  *    (with < varX > expanded to integer values)
  * 
  * Getting debug information (all vars, all PWM related registers)
- * ------------------------------------------------------------------------------
+ * ----------------------------------------------------------------------------
  * 1. You send the command DEBUG
  * 2. You receive Echo:DEBUG
- * 3. You receive all the debug information in a single line with the following format: ...:PropertyName:< value >:...
+ * 3. You receive all the debug information in a single line with the following
+ *    format: ...:PropertyName:< value >:...
  * 
  * Additional notes
  * ----------------
  * * Every message from uno-square-wavegen is terminated by a new line
- * * When you send commands you do not have to terminate them. There is
- *   a small timeout after which the command is considered received. However,
- *   if you want to send multiple subsequent commands, to avoid crosstalking,
- *   you should terminate your commands with a new line. This forces the command
- *   to be interpreted right away, without waiting for the timeout.
+ * * When you send commands you do not have to terminate them. There is a small
+ *   timeout after which the command is considered received. However, if you
+ *   want to send multiple subsequent commands, to avoid crosstalking, you
+ *   should terminate your commands with a new line. This forces the command to
+ *   be interpreted right away, without waiting for the timeout.
  * * Float point numbers are hell in embedded programing and also pose risks of
- *   precision loss. To avoid these, here only integers are used. Thus, When you
- *   want to set 12.34 Hz and 0.45 duty cycle, you will have to pass 12340:450 to
- *   the wave generator. It divides everything to NORMALIZATION_FACTOR
+ *   precision loss. To avoid these, here only integers are used. Thus, When
+ *   you want to set 12.34 Hz and 0.45 duty cycle, you will have to pass
+ *   12340:450 to the wave generator. It divides everything to
+ *   NORMALIZATION_FACTOR
  * 
  * @author Stanislav Hadjiiski
  * @version 2.0
@@ -102,7 +111,8 @@ void loop() {
     } else if(command == "DEBUG") {
       debugDump();
     } else if (command.indexOf(':') > -1) {
-      // expects string of the form frequency:dutyA[:dutyB], where frequency, dutyA and dutyB are integers
+      // expects string of the form frequency:dutyA[:dutyB],
+	  // where frequency, dutyA and dutyB are integers
       long f = command.substring(0, command.indexOf(':')).toInt();
       String dutyString = command.substring(command.indexOf(':') + 1);
       if(dutyString.indexOf(':') > -1){
@@ -116,7 +126,8 @@ void loop() {
         long duty = dutyString.toInt();
         setPWM(f, duty);
       }
-      // reply with the current state. If everything went well, this will be different from the previous state
+      // reply with the current state.
+	  // If everything went well, this will be different from the previous state
       stateDump();
     }
   }
@@ -162,14 +173,15 @@ void debugDump(){
 }
 
 /**
- * Chooses the smallest prescaler for a given frequency. This way maximum duty cycle resolution
- * is achieved.
+ * Chooses the smallest prescaler for a given frequency. This way maximum duty
+ * cycle resolution is achieved.
  */
 int getPrescalerForFrequency(long frequency) {
 //  tc = base frequency / target frequency / prescaler / 2
 // 65535 = 8M / (prescaler * frequency)
 // prescaler = 8M / (65535 * frequency)
-  float prescaler = (8000000.0 / 65535.0) / (1.0 * frequency / NORMALIZATION_FACTOR);
+  float prescaler = (8000000.0 / 65535.0) /
+                              (1.0 * frequency / NORMALIZATION_FACTOR);
   if(prescaler <= 1)
     return 1;
   else if(prescaler <= 8)
@@ -185,9 +197,10 @@ int getPrescalerForFrequency(long frequency) {
 }
 
 /**
- * Returns an integer that holds the proper bits set for the given prescaler. This value should be set to the TCCR1B register.
+ * Returns an integer that holds the proper bits set for the given prescaler.
+ * This value should be set to the TCCR1B register.
  * 
- * http://www.atmel.com/images/atmel-8271-8-bit-avr-microcontroller-atmega48a-48pa-88a-88pa-168a-168pa-328-328p_datasheet_complete.pdf
+ * Atmel Atmega 328 Datasheet:
  * Table 16-5
  */
 int preparePrescaler(int prescaler) {
@@ -197,15 +210,17 @@ int preparePrescaler(int prescaler) {
     case 64: return _BV(CS10) | _BV(CS11);
     case 256: return _BV(CS12);
     case 1024: return _BV(CS12) | _BV(CS10);
-    // effectively stops the timer. This should show the user that wrong input was provided.
+    // effectively stops the timer. This should show the user that wrong input
+	// was provided.
     default: return 0;
   }
 }
 
 /**
- * This sets a phase and frequency correct PWM mode. Counting up from 0 to ICR1 (inclusive).
+ * This sets a phase and frequency correct PWM mode.
+ * Counting up from 0 to ICR1 (inclusive).
  * 
- * http://www.atmel.com/images/atmel-8271-8-bit-avr-microcontroller-atmega48a-48pa-88a-88pa-168a-168pa-328-328p_datasheet_complete.pdf
+ * Atmel Atmega 328 Datasheet:
  * Table 16-4
  */
 inline int prepareWaveGenMode() {
@@ -213,9 +228,10 @@ inline int prepareWaveGenMode() {
 }
 
 /**
- * Clear OC1A/OC1B on Compare Match when upcounting. Set OC1A/OC1B on Compare Match when downcounting.
+ * Clear OC1A/OC1B on Compare Match when upcounting. Set OC1A/OC1B on Compare
+ * Match when downcounting.
  * 
- * http://www.atmel.com/images/atmel-8271-8-bit-avr-microcontroller-atmega48a-48pa-88a-88pa-168a-168pa-328-328p_datasheet_complete.pdf
+ * Atmel Atmega 328 Datasheet:
  * Table 16-3
  */
 inline int prepareNormalCompareOutputMode() {
@@ -223,9 +239,10 @@ inline int prepareNormalCompareOutputMode() {
 }
 
 /**
- * Set OC1A/OC1B on Compare Match when upcounting. Clear OC1A/OC1B on Compare Match when downcounting.
+ * Set OC1A/OC1B on Compare Match when upcounting. Clear OC1A/OC1B on Compare
+ * Match when downcounting.
  * 
- * http://www.atmel.com/images/atmel-8271-8-bit-avr-microcontroller-atmega48a-48pa-88a-88pa-168a-168pa-328-328p_datasheet_complete.pdf
+ * Atmel Atmega 328 Datasheet:
  * Table 16-3
  */
 inline int prepareInvertedCompareOutputMode() {
@@ -233,9 +250,10 @@ inline int prepareInvertedCompareOutputMode() {
 }
 
 /**
- * Set OC1A and clear OC1B on Compare Match when upcounting. Clear OC1A and set OC1B on Compare Match when downcounting.
+ * Set OC1A and clear OC1B on Compare Match when upcounting. Clear OC1A and set
+ * OC1B on Compare Match when downcounting.
  * 
- * http://www.atmel.com/images/atmel-8271-8-bit-avr-microcontroller-atmega48a-48pa-88a-88pa-168a-168pa-328-328p_datasheet_complete.pdf
+ * Atmel Atmega 328 Datasheet:
  * Table 16-3
  */
 inline int prepareInvertedANormalBCompareOutputMode() {
@@ -245,7 +263,7 @@ inline int prepareInvertedANormalBCompareOutputMode() {
 /**
  * Sets the Timer/Counter1 Control Register A
  * 
- * http://www.atmel.com/images/atmel-8271-8-bit-avr-microcontroller-atmega48a-48pa-88a-88pa-168a-168pa-328-328p_datasheet_complete.pdf
+ * Atmel Atmega 328 Datasheet:
  * Section 16.11.1
  */
 void setTCCR1A() {
@@ -255,7 +273,7 @@ void setTCCR1A() {
 /**
  * Sets the Timer/Counter1 Control Register B
  * 
- * http://www.atmel.com/images/atmel-8271-8-bit-avr-microcontroller-atmega48a-48pa-88a-88pa-168a-168pa-328-328p_datasheet_complete.pdf
+ * Atmel Atmega 328 Datasheet:
  * Section 16.11.2
  */
 void setTCCR1B(int prescaler) {
@@ -287,7 +305,12 @@ void setPWM(long frequency, long duty) {
  * will occasionally drop under 10000
  */
 void setPWM(long frequency, long dutyA, long dutyB) {
-  if (frequency < MIN_FREQUENCY || frequency > MAX_FREQUENCY || dutyA < MIN_DUTY || dutyA > MAX_DUTY || dutyB < MIN_DUTY || dutyB > MAX_DUTY)
+  if (frequency < MIN_FREQUENCY ||
+      frequency > MAX_FREQUENCY ||
+	  dutyA < MIN_DUTY ||
+	  dutyA > MAX_DUTY ||
+	  dutyB < MIN_DUTY ||
+	  dutyB > MAX_DUTY)
     return;
   int prescaler = getPrescalerForFrequency(frequency);
   // so we can't do this frequency. Interesting...
@@ -301,7 +324,8 @@ void setPWM(long frequency, long dutyA, long dutyB) {
   
   setTCCR1A();
   setTCCR1B(prescaler);
-  long top = (long)(8000000.0 / (1.0 * prescaler * frequency / NORMALIZATION_FACTOR) + 0.5);
+  long top = (long)(8000000.0 /
+                (1.0 * prescaler * frequency / NORMALIZATION_FACTOR) + 0.5);
   ICR1 = top;
   OCR1A = (long)(1.0 * top * dutyA / NORMALIZATION_FACTOR + 0.5);
   OCR1B = (long)(1.0 * top * dutyB / NORMALIZATION_FACTOR + 0.5);
@@ -315,7 +339,8 @@ void test() {
   TCCR1A = _BV(COM1A1) | _BV(COM1B1);
   // PWM phase correct, freq correct, TOP = ICR1; select prescaler = 64
   TCCR1B = _BV(WGM13) | _BV(CS11) | _BV(CS10);
-  // this controls the frequency. Set to base frequency / target frequency / prescaler / 2
+  // this controls the frequency.
+  // Set to base frequency / target frequency / prescaler / 2
   // 2 * tc * period = delay
   // 2 * tc / freq = delay
   // tc = delay * freq / 2
